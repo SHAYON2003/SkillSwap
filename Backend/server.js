@@ -7,7 +7,6 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const authRoutes = require('./routes/authRoute')
 
-
 // Load environment variables FIRST - use only ONE method
 require('dotenv').config();
 
@@ -87,7 +86,6 @@ app.use(express.json());
 const server = http.createServer(app);
 const { init } = require('./socket/index');
 const io = init(server);
-
 console.log('[server] socket.io initialized');
 
 // Inject io into req for controllers
@@ -101,10 +99,10 @@ const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
-const progressRoutes = require('./routes/progressRoute')
+const progressRoutes = require('./routes/progressRoute');
+
 
 app.get('/', (req, res) => res.send('SkillSwap is live'));
-
 app.use('/users', userRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/match', matchRoutes);
@@ -113,8 +111,9 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
-app.use('/api/auth', authRoutes)
+app.use('/api/auth', authRoutes);
 app.use("/api/progress", progressRoutes);
+
 
 
 // Test endpoint for Cloudinary
