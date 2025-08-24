@@ -3,9 +3,12 @@ const SkillRequest = require("../models/SkillRequest");
 const Chat = require("../models/Chat");
 const Notification = require("../models/Notification");
 const { getIO } = require("../socket");
-const User = require('../models/User')
+const User = require('../models/User');
 
-
+function getRequesterId(req) {
+  // Normalize to a plain string id, covering all shapes
+  return String(req.userId || (req.userObj && req.userObj.id) || req.auth?.id || req.user || '');
+}
 
 // helper: emit notif safely
 async function safeNotify(payload, roomUserId) {
@@ -20,6 +23,9 @@ async function safeNotify(payload, roomUserId) {
 // A: create post / request (public or direct)
 exports.createRequest = async (req, res) => {
   try {
+    const requesterId = getRequesterId(req);
+    if (!requesterId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
     const {
       to = null,
       type = "direct", // 'offer' | 'learn' | 'direct'
@@ -34,15 +40,11 @@ exports.createRequest = async (req, res) => {
     // validation matrix
     if (type === "offer") {
       if (!offeredName) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Provide the skill you want to offer" });
+        return res.status(400).json({ success: false, message: "Provide the skill you want to offer" });
       }
     } else if (type === "learn") {
       if (!requestedName) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Provide the skill you want to learn" });
+        return res.status(400).json({ success: false, message: "Provide the skill you want to learn" });
       }
     } else if (type === "direct") {
       const hasSomeSkill = offeredName || requestedName;
@@ -52,16 +54,14 @@ exports.createRequest = async (req, res) => {
           message: "Direct request needs a target user and at least one skill",
         });
       }
-      if (String(to) === String(req.user)) {
-        return res
-          .status(400)
-          .json({ success: false, message: "You cannot send request to yourself" });
+      if (String(to) === String(requesterId)) {
+        return res.status(400).json({ success: false, message: "You cannot send request to yourself" });
       }
       // avoid duplicate pending between these two
       const existing = await SkillRequest.findOne({
         $or: [
-          { from: req.user, to, status: "pending" },
-          { from: to, to: req.user, status: "pending" },
+          { from: requesterId, to, status: "pending" },
+          { from: to, to: requesterId, status: "pending" },
         ],
       });
       if (existing) {
@@ -79,7 +79,7 @@ exports.createRequest = async (req, res) => {
     const status = isPublic ? "open" : "pending";
 
     const request = await SkillRequest.create({
-      from: req.user,
+      from: requesterId,
       to: to || null,
       type,
       visibility: isPublic ? "public" : "direct",
@@ -95,11 +95,8 @@ exports.createRequest = async (req, res) => {
           user: to,
           type: "REQUEST_RECEIVED",
           title: "New skill request",
-          body:
-            (offeredName || "—") +
-            " ⇄ " +
-            (requestedName || "—"),
-          data: { requestId: request._id, fromUser: req.user },
+          body: (offeredName || "—") + " ⇄ " + (requestedName || "—"),
+          data: { requestId: request._id, fromUser: requesterId },
         },
         to
       );
@@ -107,6 +104,7 @@ exports.createRequest = async (req, res) => {
 
     return res.status(201).json({ success: true, request });
   } catch (err) {
+    console.error('createRequest error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -114,6 +112,9 @@ exports.createRequest = async (req, res) => {
 // Claim a public (open) post -> becomes a pending direct request
 exports.claimPublic = async (req, res) => {
   try {
+    const requesterId = getRequesterId(req);
+    if (!requesterId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
     const reqId = req.params.id;
     const doc = await SkillRequest.findById(reqId);
     if (!doc) return res.status(404).json({ success: false, message: "Request not found" });
@@ -122,12 +123,12 @@ exports.claimPublic = async (req, res) => {
       return res.status(400).json({ success: false, message: "This post is not open for claiming" });
     }
 
-    if (String(doc.from) === String(req.user)) {
+    if (String(doc.from) === String(requesterId)) {
       return res.status(400).json({ success: false, message: "You cannot claim your own post" });
     }
 
     // turn into a direct pending request
-    doc.to = req.user;
+    doc.to = requesterId;
     doc.visibility = "direct";
     doc.status = "pending";
     await doc.save();
@@ -138,24 +139,25 @@ exports.claimPublic = async (req, res) => {
         user: doc.from,
         type: "REQUEST_RECEIVED",
         title: "Someone responded to your post",
-        body:
-          (doc.skillOffered?.name || "—") +
-          " ⇄ " +
-          (doc.skillRequested?.name || "—"),
-        data: { requestId: doc._id, fromUser: req.user },
+        body: (doc.skillOffered?.name || "—") + " ⇄ " + (doc.skillRequested?.name || "—"),
+        data: { requestId: doc._id, fromUser: requesterId },
       },
       doc.from
     );
 
     return res.json({ success: true, message: "Claimed", request: doc });
   } catch (err) {
+    console.error('claimPublic error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
 
-// B: accept / reject; A: cancel (unchanged except it also works after claim)
+// B: accept / reject; A: cancel; complete
 exports.updateRequestStatus = async (req, res) => {
   try {
+    const requesterId = getRequesterId(req);
+    if (!requesterId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
     const { action } = req.body;
     const reqId = req.params.id;
 
@@ -164,7 +166,7 @@ exports.updateRequestStatus = async (req, res) => {
 
     // Accept / Reject (only receiver can do these)
     if (["accept", "reject"].includes(action)) {
-      if (String(doc.to) !== String(req.user)) {
+      if (String(doc.to) !== String(requesterId)) {
         return res.status(403).json({ success: false, message: "Not allowed" });
       }
 
@@ -205,7 +207,7 @@ exports.updateRequestStatus = async (req, res) => {
 
     // Cancel (only author can cancel)
     if (action === "cancel") {
-      if (String(doc.from) !== String(req.user)) {
+      if (String(doc.from) !== String(requesterId)) {
         return res.status(403).json({ success: false, message: "Not allowed" });
       }
       doc.status = "cancelled";
@@ -213,68 +215,32 @@ exports.updateRequestStatus = async (req, res) => {
       return res.json({ success: true, message: "Cancelled", request: doc });
     }
 
-    // Complete (either participant; only if accepted)
+    // Complete → redirect to completeRequest handler for consistency
     if (action === "complete") {
-      if (doc.status !== "accepted") {
-        return res.status(400).json({ success: false, message: "Only accepted requests can be completed" });
-      }
-
-      const isParticipant = [String(doc.from), String(doc.to)].includes(String(req.user));
-      if (!isParticipant) {
-        return res.status(403).json({ success: false, message: "Not allowed" });
-      }
-
-      doc.status = "completed";
-      doc.completedAt = new Date();
-      await doc.save();
-
-      const offeredName = doc?.skillOffered?.name || "";
-      const requestedName = doc?.skillRequested?.name || "";
-
-      await Promise.all([
-        bumpUserSkillCounters(doc.from, offeredName, requestedName),
-        bumpUserSkillCounters(doc.to,   offeredName, requestedName)
-      ]);
-
-      await safeNotify(
-        {
-          user: doc.from,
-          type: "REQUEST_COMPLETED",
-          title: "Swap completed",
-          body: `${offeredName || '—'} ⇄ ${requestedName || '—'} marked as completed`,
-          data: { requestId: doc._id },
-        },
-        doc.from
-      );
-      await safeNotify(
-        {
-          user: doc.to,
-          type: "REQUEST_COMPLETED",
-          title: "Swap completed",
-          body: `${offeredName || '—'} ⇄ ${requestedName || '—'} marked as completed`,
-          data: { requestId: doc._id },
-        },
-        doc.to
-      );
-
-      return res.json({ success: true, message: "Completed", request: doc });
+      req.params.id = reqId;
+      return exports.completeRequest(req, res);
     }
 
     return res.status(400).json({ success: false, message: "Invalid action" });
   } catch (err) {
+    console.error('updateRequestStatus error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
 
-
 // B: list incoming (direct only)
 exports.getIncoming = async (req, res) => {
   try {
-    const list = await SkillRequest.find({ to: req.user })
+    const requesterId = getRequesterId(req);
+    if (!requesterId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
+    const list = await SkillRequest.find({ to: requesterId })
       .populate("from", "username email avatar")
       .sort({ createdAt: -1 });
+
     return res.json({ success: true, requests: list });
   } catch (err) {
+    console.error('getIncoming error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -282,16 +248,19 @@ exports.getIncoming = async (req, res) => {
 // A: list outgoing (includes your open public posts)
 exports.getOutgoing = async (req, res) => {
   try {
-    const list = await SkillRequest.find({ from: req.user })
+    const requesterId = getRequesterId(req);
+    if (!requesterId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
+    const list = await SkillRequest.find({ from: requesterId })
       .populate("to", "username email avatar")
       .sort({ createdAt: -1 });
+
     return res.json({ success: true, requests: list });
   } catch (err) {
+    console.error('getOutgoing error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 };
-
-
 
 function escapeRegex(str = '') {
   return str.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -299,10 +268,9 @@ function escapeRegex(str = '') {
 
 exports.getPublicOpen = async (req, res) => {
   try {
-    const requesterId = typeof req.user === 'string' ? req.user : (req.user?._id || req.user?.id);
+    const requesterId = getRequesterId(req);
     const { skill, type = 'offered' } = req.query || {};
 
-    // If no skill query → original "open public" feed (excluding self)
     if (!skill || !skill.trim()) {
       const list = await SkillRequest.find({
         visibility: 'public',
@@ -315,7 +283,6 @@ exports.getPublicOpen = async (req, res) => {
       return res.json({ success: true, requests: list });
     }
 
-    // Else: skill search on public posts
     const normalizedType = String(type || 'offered').toLowerCase();
     const field = normalizedType === 'wanted' ? 'skillRequested.name' : 'skillOffered.name';
     const s = skill.trim();
@@ -341,30 +308,10 @@ exports.getPublicOpen = async (req, res) => {
   }
 };
 
-
 async function bumpUserSkillCounters(userId, offeredName, requestedName) {
-  // Normalize names
   const offName = (offeredName || '').trim();
   const reqName = (requestedName || '').trim();
 
-  // Build update operations (Mongo positional $[elem] filters)
-  const updates = [];
-  const arrayFilters = [];
-
-  if (offName) {
-    updates.push({ 
-      update: { $inc: { "skillsOffered.$[so].swapsCount": 1 } }, 
-      filter: { "so.name": offName } 
-    });
-  }
-  if (reqName) {
-    updates.push({ 
-      update: { $inc: { "skillsWanted.$[sw].swapsCount": 1 } }, 
-      filter: { "sw.name": reqName } 
-    });
-  }
-
-  // If skill doesn’t exist yet, we’ll append it with a fresh counter
   const user = await User.findById(userId);
   if (!user) return;
 
@@ -375,39 +322,24 @@ async function bumpUserSkillCounters(userId, offeredName, requestedName) {
     if (idx === -1) {
       user.skillsOffered.push({ name: offName, level: "Beginner", swapsCount: 1 });
       modified = true;
+    } else {
+      user.skillsOffered[idx].swapsCount = (user.skillsOffered[idx].swapsCount || 0) + 1;
     }
   }
+
   if (reqName) {
     const idx = (user.skillsWanted || []).findIndex(s => (s?.name || '').toLowerCase() === reqName.toLowerCase());
     if (idx === -1) {
       user.skillsWanted.push({ name: reqName, level: "Beginner", swapsCount: 1 });
       modified = true;
+    } else {
+      user.skillsWanted[idx].swapsCount = (user.skillsWanted[idx].swapsCount || 0) + 1;
     }
   }
 
-  if (modified) {
-    await user.save();
-  } else if (updates.length) {
-    // Do in-place increments if the subdocs exist
-    const $inc = {};
-    const filters = {};
-
-    updates.forEach((u) => {
-      Object.assign($inc, u.update.$inc);
-      Object.assign(filters, u.filter);
-    });
-
-    const arrayFiltersFinal = [];
-    if (offName) arrayFiltersFinal.push({ "so.name": offName });
-    if (reqName) arrayFiltersFinal.push({ "sw.name": reqName });
-
-    await User.updateOne(
-      { _id: userId },
-      { $inc },
-      { arrayFilters: arrayFiltersFinal.length ? arrayFiltersFinal : undefined }
-    );
-  }
+  if (modified) await user.save();
 }
+
 exports.completeRequest = async (req, res) => {
   try {
     const request = await SkillRequest.findById(req.params.id);
@@ -415,152 +347,82 @@ exports.completeRequest = async (req, res) => {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    // Only participants can complete
-    const currentUserId = String(req.user?._id || req.user?.id || req.user || '');
+    const currentUserId = String(req.userId || req.user || '');
     const isParticipant = [String(request.from), String(request.to)].includes(currentUserId);
-    
     if (!isParticipant) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Only accepted requests can be completed
     if (request.status !== 'accepted') {
       return res.status(400).json({ message: 'Only accepted requests can be completed' });
     }
 
-    // Mark as completed
     request.status = 'completed';
     request.completedAt = new Date();
     await request.save();
 
-    // Get both users
     const [fromUser, toUser] = await Promise.all([
       User.findById(request.from),
       User.findById(request.to),
     ]);
-
     if (!fromUser || !toUser) {
       return res.status(404).json({ message: 'One or both users not found' });
     }
 
-    // Helper function to fix typos in skill levels
-    const fixSkillLevels = (skills) => {
-      if (skills && Array.isArray(skills)) {
-        skills.forEach(skill => {
-          if (skill.level === 'Intermeditate') {
-            skill.level = 'Intermediate';
-          }
-          // Fix any other potential typos
-          if (skill.level === 'Expertt') {
-            skill.level = 'Expert';
-          }
-          if (skill.level === 'Beginnner') {
-            skill.level = 'Beginner';
-          }
-        });
-      }
-    };
-
-    // Fix any typos in skill levels before validation
-    fixSkillLevels(fromUser.skillsOffered);
-    fixSkillLevels(fromUser.skillsWanted);
-    fixSkillLevels(toUser.skillsOffered);
-    fixSkillLevels(toUser.skillsWanted);
-
-    // Helper to safely ensure progress object exists
+    // ensure progress objects are plain JSON
     const ensureProgress = (user) => {
       if (!user.progress) {
-        user.progress = {
-          swapsCount: 0,
-          offered: new Map(),
-          learned: new Map()
-        };
+        user.progress = { swapsCount: 0, offered: {}, learned: {} };
       }
-      if (!user.progress.offered) {
-        user.progress.offered = new Map();
-      }
-      if (!user.progress.learned) {
-        user.progress.learned = new Map();
-      }
+      if (!user.progress.offered) user.progress.offered = {};
+      if (!user.progress.learned) user.progress.learned = {};
     };
 
-    // Ensure both users have progress objects
     ensureProgress(fromUser);
     ensureProgress(toUser);
 
     const offeredName = request.skillOffered?.name?.trim();
     const requestedName = request.skillRequested?.name?.trim();
 
-    // Increment total swaps count for both users
+    // total swaps
     fromUser.progress.swapsCount = (fromUser.progress.swapsCount || 0) + 1;
     toUser.progress.swapsCount = (toUser.progress.swapsCount || 0) + 1;
 
-    // Update skill-specific counters using Map methods
+    // Offered skill → increment fromUser.offered, toUser.learned
     if (offeredName) {
-      // From user taught this skill, so increment their "offered" count
-      const currentOfferedCount = fromUser.progress.offered.get(offeredName) || 0;
-      fromUser.progress.offered.set(offeredName, currentOfferedCount + 1);
-      
-      // To user learned this skill, so increment their "learned" count
-      const currentLearnedCount = toUser.progress.learned.get(offeredName) || 0;
-      toUser.progress.learned.set(offeredName, currentLearnedCount + 1);
+      fromUser.progress.offered[offeredName] = (fromUser.progress.offered[offeredName] || 0) + 1;
+      toUser.progress.learned[offeredName] = (toUser.progress.learned[offeredName] || 0) + 1;
     }
 
+    // Requested skill → increment toUser.offered, fromUser.learned
     if (requestedName) {
-      // To user taught this skill (if they offered something back), increment their "offered" count
-      const currentOfferedCount = toUser.progress.offered.get(requestedName) || 0;
-      toUser.progress.offered.set(requestedName, currentOfferedCount + 1);
-      
-      // From user learned this skill, increment their "learned" count
-      const currentLearnedCount = fromUser.progress.learned.get(requestedName) || 0;
-      fromUser.progress.learned.set(requestedName, currentLearnedCount + 1);
+      toUser.progress.offered[requestedName] = (toUser.progress.offered[requestedName] || 0) + 1;
+      fromUser.progress.learned[requestedName] = (fromUser.progress.learned[requestedName] || 0) + 1;
     }
 
-    // Also update the skillsOffered and skillsWanted arrays with swapsCounts
+    // Also update skillsOffered / skillsWanted arrays
     if (offeredName) {
-      // Update fromUser's skillsOffered
-      const offeredSkill = fromUser.skillsOffered.find(skill => skill.name === offeredName);
-      if (offeredSkill) {
-        offeredSkill.swapsCount = (offeredSkill.swapsCount || 0) + 1;
-      }
-      
-      // Update toUser's skillsWanted (if they wanted this skill)
-      const wantedSkill = toUser.skillsWanted.find(skill => skill.name === offeredName);
-      if (wantedSkill) {
-        wantedSkill.swapsCount = (wantedSkill.swapsCount || 0) + 1;
-      }
-    }
+      const offeredSkill = fromUser.skillsOffered.find(s => s.name === offeredName);
+      if (offeredSkill) offeredSkill.swapsCount = (offeredSkill.swapsCount || 0) + 1;
 
+      const wantedSkill = toUser.skillsWanted.find(s => s.name === offeredName);
+      if (wantedSkill) wantedSkill.swapsCount = (wantedSkill.swapsCount || 0) + 1;
+    }
     if (requestedName) {
-      // Update toUser's skillsOffered (if they offered this skill back)
-      const offeredSkill = toUser.skillsOffered.find(skill => skill.name === requestedName);
-      if (offeredSkill) {
-        offeredSkill.swapsCount = (offeredSkill.swapsCount || 0) + 1;
-      }
-      
-      // Update fromUser's skillsWanted
-      const wantedSkill = fromUser.skillsWanted.find(skill => skill.name === requestedName);
-      if (wantedSkill) {
-        wantedSkill.swapsCount = (wantedSkill.swapsCount || 0) + 1;
-      }
+      const offeredSkill = toUser.skillsOffered.find(s => s.name === requestedName);
+      if (offeredSkill) offeredSkill.swapsCount = (offeredSkill.swapsCount || 0) + 1;
+
+      const wantedSkill = fromUser.skillsWanted.find(s => s.name === requestedName);
+      if (wantedSkill) wantedSkill.swapsCount = (wantedSkill.swapsCount || 0) + 1;
     }
 
-    // Save both users (now with fixed data)
-    await Promise.all([
-      fromUser.save(),
-      toUser.save()
-    ]);
+    await Promise.all([fromUser.save(), toUser.save()]);
 
-    return res.json({ 
-      success: true, 
-      message: 'Request marked as completed', 
-      request 
-    });
-
+    return res.json({ success: true, message: 'Request marked as completed', request });
   } catch (err) {
     console.error('completeRequest error:', err);
-    return res.status(500).json({ 
-      message: 'Server error', 
+    return res.status(500).json({
+      message: 'Server error',
       error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
   }

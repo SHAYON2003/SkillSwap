@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 function Search() {
   const [skill, setSkill] = useState('');
-  const [type, setType] = useState('offered'); // 'offered' | 'wanted'
-  const [users, setUsers] = useState([]); // can hold user profiles OR public requests
-  const [mode, setMode] = useState('skill'); // 'skill' | 'matches'
+  const [type, setType] = useState('offered');
+  const [users, setUsers] = useState([]);
+  const [mode, setMode] = useState('skill');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { user } = useAuth();
@@ -28,7 +27,6 @@ function Search() {
 
       if (mode === 'skill') {
         const qSkill = encodeURIComponent(skill.trim());
-        // Backend should map: offered -> skillOffered.name, wanted -> skillRequested.name
         const url = `${base}/api/requests/public?skill=${qSkill}&type=${encodeURIComponent(type)}`;
         console.log('Making request to:', url);
 
@@ -78,10 +76,8 @@ function Search() {
 
   useEffect(() => {
     if (mode === 'matches') {
-      // auto-run matches mode
       searchUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const sendRequest = async (toUserId) => {
@@ -93,7 +89,7 @@ function Search() {
         { to: toUserId, skillOffered: { name: 'Your Skill' }, skillRequested: { name: 'Their Skill' } },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      setError('Request sent successfully'); // your UI already shows green when msg contains "successfully"
+      setError('Request sent successfully');
     } catch (err) {
       console.error('Request error full:', err);
       setError(err.response?.data?.message || 'Failed to send request');
@@ -102,7 +98,6 @@ function Search() {
     }
   };
 
-  // ✅ Claim a public (open) request from the Search grid
   const claimPublic = async (requestId) => {
     setError('');
     setLoading(true);
@@ -113,9 +108,8 @@ function Search() {
         {},
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
-      // Remove claimed request from grid
       setUsers((prev) => (Array.isArray(prev) ? prev.filter((x) => x._id !== requestId) : []));
-      setError('Claimed successfully'); // shows as green
+      setError('Claimed successfully');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to claim post');
       console.error('Claim error:', err);
@@ -131,381 +125,412 @@ function Search() {
     }
   };
 
-  // Floating dots positions
-  const floatingDots = Array.from({ length: 25 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 2,
-    delay: Math.random() * 5
-  }));
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-white via-blue-50 to-purple-50">
-      {/* Animated Background Elements */}
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Advanced Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
-        <motion.div
-          animate={{ x: [0, 120, 0], y: [0, -80, 0], rotate: [0, 180, 360] }}
-          transition={{ duration: 22, repeat: Infinity, ease: "linear" }}
-          className="absolute rounded-full top-32 left-16 w-72 h-72 bg-gradient-to-br from-blue-300/25 to-teal-300/25 blur-xl"
-        />
-        <motion.div
-          animate={{ x: [0, -100, 0], y: [0, 120, 0], rotate: [0, -180, -360] }}
-          transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
-          className="absolute w-56 h-56 rounded-full top-20 right-24 bg-gradient-to-br from-purple-300/30 to-pink-300/30 blur-xl"
-        />
-        <motion.div
-          animate={{ x: [0, 90, 0], y: [0, -90, 0], rotate: [0, 90, 180] }}
-          transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-          className="absolute rounded-full bottom-40 left-1/4 w-80 h-80 bg-gradient-to-br from-teal-200/20 to-blue-200/20 blur-xl"
-        />
-        <motion.div animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute w-20 h-20 rotate-45 border-2 top-1/3 left-1/5 border-blue-200/40" />
-        <motion.div animate={{ rotate: [0, -360], scale: [1, 0.8, 1] }} transition={{ duration: 16, repeat: Infinity, ease: "linear" }} className="absolute w-24 h-24 border-2 rounded-full bottom-1/4 right-1/3 border-purple-200/40" />
-        <motion.div animate={{ rotate: [0, 180], scale: [1, 1.1, 1] }} transition={{ duration: 12, repeat: Infinity, ease: "linear" }} className="absolute w-16 h-16 border-2 top-2/3 right-1/5 border-teal-200/40" />
-        {floatingDots.map((dot) => (
-          <motion.div
-            key={dot.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0], y: [0, -40, 0], scale: [1, 1.3, 1] }}
-            transition={{ duration: 5, delay: dot.delay, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
-            style={{ left: `${dot.x}%`, top: `${dot.y}%`, width: `${dot.size}px`, height: `${dot.size}px` }}
+        {/* Animated gradient orbs */}
+        <div className="absolute rounded-full top-20 left-10 w-96 h-96 bg-gradient-to-r from-blue-400/20 to-purple-400/20 mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute rounded-full top-40 right-10 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-pink-400/20 mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute rounded-full bottom-20 left-1/3 w-96 h-96 bg-gradient-to-r from-teal-400/20 to-blue-400/20 mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+        
+        {/* Geometric patterns */}
+        <div className="absolute inset-0 opacity-10">
+          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+
+        {/* Floating particles */}
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 animate-bounce"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${2 + Math.random() * 2}s`
+            }}
           />
         ))}
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
       </div>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }} className="container relative z-10 p-4 pt-20 mx-auto">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-12 text-center">
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring", stiffness: 150 }} className="inline-flex items-center gap-2 px-4 py-2 mb-6 border rounded-full shadow-lg bg-white/30 backdrop-blur-md border-white/20">
-            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-3 h-3 bg-blue-400 rounded-full" />
-            <span className="text-sm font-medium text-gray-700">🔍 Discover Skills</span>
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="mb-4 text-4xl font-bold md:text-6xl">
-            <motion.span animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }} transition={{ duration: 5, repeat: Infinity, ease: "linear" }} className="bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-300% bg-clip-text text-transparent">Find Your Perfect</motion.span>
+      <div className="container relative z-10 p-6 pt-24 mx-auto">
+        {/* Hero Section */}
+        <div className="mb-16 text-center">
+          <div className="inline-flex items-center gap-3 px-6 py-3 mb-8 border rounded-full shadow-lg bg-white/20 backdrop-blur-xl border-white/30">
+            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse"></div>
+            <span className="text-sm font-semibold tracking-wide text-gray-700">🚀 SKILL DISCOVERY PLATFORM</span>
+          </div>
+          
+          <h1 className="mb-6 text-5xl font-black tracking-tight md:text-7xl">
+            <span className="text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600 bg-clip-text animate-pulse">
+              Master New Skills
+            </span>
             <br />
-            <motion.span animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }} transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 0.5 }} className="bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 bg-300% bg-clip-text text-transparent">Learning Match</motion.span>
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.6 }} className="max-w-2xl mx-auto text-xl text-gray-600">Connect with skilled individuals and discover amazing learning opportunities in your area.</motion.p>
-        </motion.div>
+            <span className="text-transparent bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 bg-clip-text">
+              Connect & Grow
+            </span>
+          </h1>
+          
+          <p className="max-w-3xl mx-auto text-xl leading-relaxed text-gray-600">
+            Discover talented individuals in your network and unlock endless learning opportunities through meaningful skill exchanges.
+          </p>
+        </div>
 
+        {/* Error/Success Messages */}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`mb-6 p-4 rounded-2xl backdrop-blur-md border shadow-lg ${
-              error.includes('successfully')
-                ? 'bg-green-50/80 border-green-200 text-green-800'
-                : 'bg-red-50/80 border-red-200 text-red-800'
-            }`}
-          >
-            {error}
-          </motion.div>
+          <div className={`mb-8 p-6 rounded-2xl backdrop-blur-xl border-2 shadow-xl transform transition-all duration-300 ${
+            error.includes('successfully')
+              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+              : 'bg-red-50/80 border-red-200 text-red-800'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{error.includes('successfully') ? '✅' : '❌'}</span>
+              <span className="font-medium">{error}</span>
+            </div>
+          </div>
         )}
 
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }} className="p-8 mb-8 transition-all duration-300 border shadow-xl bg-white/40 backdrop-blur-lg border-white/20 rounded-3xl hover:shadow-2xl">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-4 mb-4 sm:flex-row">
-              <motion.button
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+        {/* Advanced Search Interface */}
+        <div className="p-8 mb-12 border shadow-2xl bg-white/30 backdrop-blur-2xl border-white/20 rounded-3xl">
+          <div className="flex flex-col gap-6">
+            {/* Mode Toggle */}
+            <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+              <button
                 onClick={() => setMode(mode === 'skill' ? 'matches' : 'skill')}
-                className={`px-8 py-4 rounded-2xl font-semibold transition-all duration-300 shadow-lg ${
+                className={`group relative px-8 py-4 rounded-2xl font-bold text-white overflow-hidden transition-all duration-500 transform hover:scale-105 hover:shadow-2xl ${
                   mode === 'skill'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-xl'
-                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-xl'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600'
+                    : 'bg-gradient-to-r from-purple-600 to-pink-600'
                 }`}
               >
-                {mode === 'skill' ? (
-                  <span className="flex items-center gap-2">
-                    <span className="text-xl">🎯</span>Show Smart Matches
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <span className="text-xl">🔍</span>Search by Skill
-                  </span>
-                )}
-              </motion.button>
+                <div className="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-r from-white/20 to-transparent group-hover:opacity-100"></div>
+                <span className="relative flex items-center gap-3">
+                  {mode === 'skill' ? (
+                    <>
+                      <span className="text-xl">🎯</span>
+                      Show Smart Matches
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xl">🔍</span>
+                      Search by Skill
+                    </>
+                  )}
+                </span>
+              </button>
+
               {loading && (
-                <div className="flex items-center gap-3 px-6 py-4 bg-white/50 backdrop-blur-sm rounded-2xl">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-6 h-6 border-blue-200 rounded-full border-3 border-t-blue-600" />
-                  <span className="font-medium text-blue-700">{mode === 'skill' ? 'Searching...' : 'Finding matches...'}</span>
+                <div className="flex items-center gap-4 px-8 py-4 border shadow-lg bg-white/40 backdrop-blur-lg rounded-2xl border-white/30">
+                  <div className="relative">
+                    <div className="w-8 h-8 border-4 border-blue-200 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 w-8 h-8 border-4 border-transparent rounded-full border-t-blue-600 animate-spin"></div>
+                  </div>
+                  <span className="text-lg font-semibold text-blue-700">
+                    {mode === 'skill' ? 'Searching...' : 'Finding matches...'}
+                  </span>
                 </div>
               )}
             </div>
 
+            {/* Skill Search Form */}
             {mode === 'skill' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.3 }} className="space-y-4">
+              <div className="space-y-6 duration-500 animate-in slide-in-from-top">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                  <input
-                    type="text"
-                    value={skill}
-                    onChange={(e) => setSkill(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Enter skill (e.g., Python, Guitar)"
-                    className="p-4 text-gray-800 placeholder-gray-500 transition-all duration-300 border outline-none md:col-span-2 bg-white/60 backdrop-blur-sm border-white/30 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={loading}
-                  />
+                  {/* Skill Input */}
+                  <div className="relative md:col-span-2 group">
+                    <input
+                      type="text"
+                      value={skill}
+                      onChange={(e) => setSkill(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Enter skill (e.g., Python, Guitar, Photography)"
+                      className="w-full p-5 text-lg font-medium text-gray-800 placeholder-gray-400 transition-all duration-300 border-2 outline-none bg-white/60 backdrop-blur-lg border-white/30 rounded-2xl focus:border-blue-400 focus:bg-white/80 focus:shadow-xl group-hover:border-blue-300"
+                      disabled={loading}
+                    />
+                    <div className="absolute inset-y-0 flex items-center pointer-events-none right-4">
+                      <span className="text-2xl">🔍</span>
+                    </div>
+                  </div>
 
+                  {/* Type Selection */}
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
-                    className="p-4 text-gray-800 transition-all duration-300 border outline-none bg-white/60 backdrop-blur-sm border-white/30 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="p-5 text-lg font-medium text-gray-800 transition-all duration-300 border-2 outline-none bg-white/60 backdrop-blur-lg border-white/30 rounded-2xl focus:border-blue-400 focus:bg-white/80 focus:shadow-xl hover:border-blue-300"
                     disabled={loading}
                   >
-                    <option value="offered">I can teach this (find learners)</option>
-                    <option value="wanted">I want to learn this (find teachers)</option>
+                    <option value="offered">🎯 I can teach this (find learners)</option>
+                    <option value="wanted">🎓 I want to learn this (find teachers)</option>
                   </select>
 
-                  <motion.button
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
+                  {/* Search Button */}
+                  <button
                     onClick={searchUsers}
-                    className="flex items-center justify-center gap-2 p-4 font-semibold text-white transition-all duration-300 shadow-lg bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={loading || !skill.trim()}
+                    className="relative px-6 py-5 overflow-hidden font-bold text-white transition-all duration-300 transform group bg-gradient-to-r from-blue-600 to-teal-600 rounded-2xl hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    <span className="text-xl">🔍</span> Search
-                  </motion.button>
+                    <div className="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-r from-white/20 to-transparent group-hover:opacity-100"></div>
+                    <span className="relative flex items-center justify-center gap-3">
+                      <span className="text-xl">🚀</span>
+                      <span className="text-lg">Search</span>
+                    </span>
+                  </button>
                 </div>
-
-                {/* Helper text to explain the search logic */}
-                <div className="px-4 py-2 text-sm text-gray-600 border bg-blue-50/80 backdrop-blur-sm rounded-xl border-blue-200/50">
-                  <span className="font-medium">💡 Smart Search:</span>
-                  {type === 'offered'
-                    ? ' Finding people who want to learn this skill from you'
-                    : ' Finding people who can teach you this skill'}
-                </div>
-              </motion.div>
+              </div>
             )}
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.6 }}>
+        {/* Results Section */}
+        <div className="duration-700 animate-in fade-in">
+          {/* No Results State */}
           {(Array.isArray(users) ? users : []).length === 0 && !loading && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-16 text-center">
-              <div className="mb-4 text-6xl">🤔</div>
-              <h3 className="mb-2 text-2xl font-bold text-gray-700">
+            <div className="py-20 text-center border shadow-xl bg-white/20 backdrop-blur-lg rounded-3xl border-white/30">
+              <div className="mb-6 text-8xl animate-bounce">🤔</div>
+              <h3 className="mb-4 text-3xl font-bold text-gray-700">
                 {mode === 'skill' ? 'No results found' : 'No matches available'}
               </h3>
-              <p className="max-w-md mx-auto text-gray-500">
+              <p className="max-w-md mx-auto text-xl text-gray-500">
                 {mode === 'skill'
                   ? 'Try searching for different skills or check the spelling.'
                   : 'Complete your profile with skills to find better matches.'}
               </p>
-            </motion.div>
+            </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Results Grid */}
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {(Array.isArray(users) ? users : []).map((u, index) => {
-              // Determine if this item is a public request (from /api/requests/public)
               const isRequest = !!u?.from || u?.visibility === 'public' || !!u?.skillOffered || !!u?.skillRequested;
-
-              // Normalize display name & email
               const displayName = isRequest
                 ? (u?.from?.username || u?.from?.name || 'Unknown')
                 : (u?.username || u?.name || 'Unknown');
-
               const displayEmail = isRequest ? (u?.from?.email || '') : (u?.email || '');
 
               return (
-                <motion.div
+                <div
                   key={u._id || u.id || index}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.4 }}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                  className="p-6 transition-all duration-300 border shadow-xl bg-white/40 backdrop-blur-lg border-white/20 rounded-3xl hover:shadow-2xl group"
+                  className="relative p-8 transition-all duration-500 border shadow-xl group bg-white/30 backdrop-blur-2xl border-white/20 rounded-3xl hover:shadow-2xl hover:scale-105 hover:bg-white/40"
                 >
-                  <div className="flex items-center gap-4 mb-6">
-                    <motion.div whileHover={{ scale: 1.1, rotate: 5 }} className="relative">
-                      <div className="flex items-center justify-center w-16 h-16 shadow-lg bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl">
-                        <span className="text-2xl font-bold text-white">
-                          {displayName.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute w-5 h-5 bg-green-400 border-2 border-white rounded-full -top-1 -right-1"
-                      />
-                    </motion.div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 transition-colors duration-300 group-hover:text-blue-600">
-                        {displayName}
-                      </h3>
-                      <p className="text-sm text-gray-600">{displayEmail}</p>
-
-                      {isRequest && (
-                        <div className="mt-1 text-xs">
-                          <span className="px-2 py-0.5 mr-2 font-medium text-indigo-700 bg-indigo-100 rounded-full">
-                            Public
-                          </span>
-                          <span className="px-2 py-0.5 font-medium text-emerald-700 bg-emerald-100 rounded-full">
-                            {u?.type === 'offer' ? 'Offering' : 'Wants to learn'}
+                  {/* Gradient overlay on hover */}
+                  <div className="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl group-hover:opacity-100"></div>
+                  
+                  {/* Content */}
+                  <div className="relative z-10">
+                    {/* User Header */}
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="relative">
+                        <div className="flex items-center justify-center w-20 h-20 transition-transform duration-300 transform shadow-lg bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl group-hover:scale-110">
+                          <span className="text-3xl font-bold text-white">
+                            {displayName.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Skills */}
-                  <div className="mb-6 space-y-4">
-                    <div>
-                      <h4 className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-700">
-                        <span className="text-green-500">🎯</span>Skills Offered
-                      </h4>
-                      <div className="flex flex-wrap gap-1">
-                        {isRequest ? (
-                          u?.skillOffered?.name ? (
-                            <span className="px-2 py-1 text-xs font-medium text-green-700 rounded-full bg-green-100/80">
-                              {u.skillOffered.name}
+                        <div className="absolute w-6 h-6 border-white rounded-full -top-2 -right-2 bg-gradient-to-r from-green-400 to-emerald-500 border-3 animate-pulse"></div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <h3 className="mb-1 text-2xl font-bold text-gray-800 transition-colors duration-300 group-hover:text-blue-600">
+                          {displayName}
+                        </h3>
+                        <p className="text-sm font-medium text-gray-600">{displayEmail}</p>
+                        
+                        {isRequest && (
+                          <div className="flex gap-2 mt-2">
+                            <span className="px-3 py-1 text-xs font-bold text-indigo-700 border border-indigo-200 rounded-full bg-indigo-100/80">
+                              📢 Public
                             </span>
+                            <span className="px-3 py-1 text-xs font-bold border rounded-full text-emerald-700 bg-emerald-100/80 border-emerald-200">
+                              {u?.type === 'offer' ? '🎯 Offering' : '🎓 Learning'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Skills Section */}
+                    <div className="mb-8 space-y-6">
+                      {/* Skills Offered */}
+                      <div>
+                        <h4 className="flex items-center gap-2 mb-3 text-sm font-bold text-gray-700">
+                          <span className="text-lg">🎯</span>Skills Offered
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {isRequest ? (
+                            u?.skillOffered?.name ? (
+                              <span className="px-4 py-2 text-sm font-bold text-green-700 border border-green-200 shadow-sm bg-green-100/80 rounded-xl">
+                                {u.skillOffered.name}
+                              </span>
+                            ) : (
+                              <span className="text-sm italic font-medium text-gray-400">None listed</span>
+                            )
+                          ) : Array.isArray(u?.skillsOffered) && u.skillsOffered.length > 0 ? (
+                            <>
+                              {u.skillsOffered.slice(0, 3).map((s, idx) => (
+                                <span key={idx} className="px-4 py-2 text-sm font-bold text-green-700 transition-transform duration-200 transform border border-green-200 shadow-sm bg-green-100/80 rounded-xl hover:scale-105">
+                                  {typeof s === 'string' ? s : s?.name}
+                                </span>
+                              ))}
+                              {u.skillsOffered.length > 3 && (
+                                <span className="px-4 py-2 text-sm font-bold text-gray-600 border border-gray-200 shadow-sm bg-gray-100/80 rounded-xl">
+                                  +{u.skillsOffered.length - 3} more
+                                </span>
+                              )}
+                            </>
                           ) : (
-                            <span className="text-xs italic text-gray-400">None listed</span>
-                          )
-                        ) : Array.isArray(u?.skillsOffered) && u.skillsOffered.length > 0 ? (
-                          u.skillsOffered.slice(0, 3).map((s, idx) => (
-                            <span key={idx} className="px-2 py-1 text-xs font-medium text-green-700 rounded-full bg-green-100/80">
-                              {typeof s === 'string' ? s : s?.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs italic text-gray-400">None listed</span>
-                        )}
-                        {!isRequest &&
-                          Array.isArray(u?.skillsOffered) &&
-                          u.skillsOffered.length > 3 && (
-                            <span className="px-2 py-1 text-xs font-medium text-gray-600 rounded-full bg-gray-100/80">
-                              +{u.skillsOffered.length - 3} more
-                            </span>
+                            <span className="text-sm italic font-medium text-gray-400">None listed</span>
                           )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <h4 className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-700">
-                        <span className="text-blue-500">🎓</span>Skills Wanted
-                      </h4>
-                      <div className="flex flex-wrap gap-1">
-                        {isRequest ? (
-                          u?.skillRequested?.name ? (
-                            <span className="px-2 py-1 text-xs font-medium text-blue-700 rounded-full bg-blue-100/80">
-                              {u.skillRequested.name}
-                            </span>
+                      {/* Skills Wanted */}
+                      <div>
+                        <h4 className="flex items-center gap-2 mb-3 text-sm font-bold text-gray-700">
+                          <span className="text-lg">🎓</span>Skills Wanted
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {isRequest ? (
+                            u?.skillRequested?.name ? (
+                              <span className="px-4 py-2 text-sm font-bold text-blue-700 border border-blue-200 shadow-sm bg-blue-100/80 rounded-xl">
+                                {u.skillRequested.name}
+                              </span>
+                            ) : (
+                              <span className="text-sm italic font-medium text-gray-400">None listed</span>
+                            )
+                          ) : Array.isArray(u?.skillsWanted) && u.skillsWanted.length > 0 ? (
+                            <>
+                              {u.skillsWanted.slice(0, 3).map((s, idx) => (
+                                <span key={idx} className="px-4 py-2 text-sm font-bold text-blue-700 transition-transform duration-200 transform border border-blue-200 shadow-sm bg-blue-100/80 rounded-xl hover:scale-105">
+                                  {typeof s === 'string' ? s : s?.name}
+                                </span>
+                              ))}
+                              {u.skillsWanted.length > 3 && (
+                                <span className="px-4 py-2 text-sm font-bold text-gray-600 border border-gray-200 shadow-sm bg-gray-100/80 rounded-xl">
+                                  +{u.skillsWanted.length - 3} more
+                                </span>
+                              )}
+                            </>
                           ) : (
-                            <span className="text-xs italic text-gray-400">None listed</span>
-                          )
-                        ) : Array.isArray(u?.skillsWanted) && u.skillsWanted.length > 0 ? (
-                          u.skillsWanted.slice(0, 3).map((s, idx) => (
-                            <span key={idx} className="px-2 py-1 text-xs font-medium text-blue-700 rounded-full bg-blue-100/80">
-                              {typeof s === 'string' ? s : s?.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs italic text-gray-400">None listed</span>
-                        )}
-                        {!isRequest &&
-                          Array.isArray(u?.skillsWanted) &&
-                          u.skillsWanted.length > 3 && (
-                            <span className="px-2 py-1 text-xs font-medium text-gray-600 rounded-full bg-gray-100/80">
-                              +{u.skillsWanted.length - 3} more
-                            </span>
+                            <span className="text-sm italic font-medium text-gray-400">None listed</span>
                           )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  {!isRequest ? (
-                    // User profile -> Send Request
-                    u?._id !== user?.id ? (
-                      <motion.button
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => sendRequest(u._id)}
-                        className="flex items-center justify-center w-full gap-2 p-3 font-semibold text-white transition-all duration-300 shadow-lg bg-gradient-to-r from-green-500 to-teal-500 rounded-2xl hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            className="w-5 h-5 border-2 border-white rounded-full border-t-transparent"
-                          />
-                        ) : (
-                          <>
-                            <span className="text-lg">🤝</span>Send Request
-                          </>
-                        )}
-                      </motion.button>
+                    {/* Action Buttons */}
+                    {!isRequest ? (
+                      u?._id !== user?.id ? (
+                        <button
+                          onClick={() => sendRequest(u._id)}
+                          disabled={loading}
+                          className="relative w-full px-6 py-4 overflow-hidden font-bold text-white transition-all duration-300 transform group bg-gradient-to-r from-green-500 to-teal-500 rounded-2xl hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        >
+                          <div className="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-r from-white/20 to-transparent group-hover:opacity-100"></div>
+                          <span className="relative flex items-center justify-center gap-3">
+                            {loading ? (
+                              <div className="w-6 h-6 rounded-full border-3 border-white/30 border-t-white animate-spin"></div>
+                            ) : (
+                              <>
+                                <span className="text-xl">🤝</span>
+                                <span className="text-lg">Send Request</span>
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="w-full p-4 font-bold text-center text-gray-500 border-2 border-gray-200 bg-gray-100/80 rounded-2xl">
+                          <span className="flex items-center justify-center gap-3">
+                            <span className="text-xl">👤</span>
+                            <span className="text-lg">This is you</span>
+                          </span>
+                        </div>
+                      )
                     ) : (
-                      <div className="w-full p-3 font-medium text-center text-gray-500 bg-gray-100/80 rounded-2xl">
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="text-lg">👤</span>This is you
-                        </span>
-                      </div>
-                    )
-                  ) : (
-                    // Public request -> Claim Post
-                    (u?.from?._id || u?.from?.id) !== user?.id ? (
-                      <motion.button
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => claimPublic(u._id)}
-                        className="flex items-center justify-center w-full gap-2 p-3 font-semibold text-white transition-all duration-300 shadow-lg bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            className="w-5 h-5 border-2 border-white rounded-full border-t-transparent"
-                          />
-                        ) : (
-                          <>
-                            <span className="text-lg">📌</span> Claim Post
-                          </>
-                        )}
-                      </motion.button>
-                    ) : (
-                      <div className="w-full p-3 font-medium text-center text-gray-500 bg-gray-100/80 rounded-2xl">
-                        <span className="flex items-center justify-center gap-2">
-                          <span className="text-lg">📝</span>Your public post
-                        </span>
-                      </div>
-                    )
-                  )}
-                </motion.div>
+                      (u?.from?._id || u?.from?.id) !== user?.id ? (
+                        <button
+                          onClick={() => claimPublic(u._id)}
+                          disabled={loading}
+                          className="relative w-full px-6 py-4 overflow-hidden font-bold text-white transition-all duration-300 transform group bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        >
+                          <div className="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-r from-white/20 to-transparent group-hover:opacity-100"></div>
+                          <span className="relative flex items-center justify-center gap-3">
+                            {loading ? (
+                              <div className="w-6 h-6 rounded-full border-3 border-white/30 border-t-white animate-spin"></div>
+                            ) : (
+                              <>
+                                <span className="text-xl">📌</span>
+                                <span className="text-lg">Claim Post</span>
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="w-full p-4 font-bold text-center text-gray-500 border-2 border-gray-200 bg-gray-100/80 rounded-2xl">
+                          <span className="flex items-center justify-center gap-3">
+                            <span className="text-xl">📝</span>
+                            <span className="text-lg">Your public post</span>
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
-        </motion.div>
+        </div>
 
-        <motion.button
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1, duration: 0.3 }}
-          whileHover={{ scale: 1.1, rotate: 180 }}
-          whileTap={{ scale: 0.9 }}
+        {/* Scroll to Top Button */}
+        <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed z-50 flex items-center justify-center text-white transition-all duration-300 rounded-full shadow-lg bottom-8 right-8 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-xl"
+          className="fixed z-50 w-16 h-16 text-white transition-all duration-300 transform shadow-2xl bottom-8 right-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl hover:shadow-3xl hover:scale-110 group"
         >
-          <span className="text-xl">↑</span>
-        </motion.button>
-      </motion.div>
+          <div className="absolute inset-0 transition-opacity duration-300 opacity-0 bg-gradient-to-r from-white/20 to-transparent group-hover:opacity-100 rounded-2xl"></div>
+          <span className="relative text-2xl font-bold">↑</span>
+        </button>
+      </div>
 
+      {/* Custom Styles */}
       <style>{`
-        .bg-grid-pattern {
-          background-image: radial-gradient(circle at 25px 25px, rgba(0,0,0,0.1) 2px, transparent 0);
-          background-size: 50px 50px;
+        @keyframes animate-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .bg-300% {
-          background-size: 300% 300%;
+        
+        .animate-in {
+          animation: animate-in 0.6s ease-out;
         }
-        .border-3 { border-width: 3px; }
+        
+        .slide-in-from-top {
+          animation: slide-in-from-top 0.5s ease-out;
+        }
+        
+        @keyframes slide-in-from-top {
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .border-3 { 
+          border-width: 3px; 
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
       `}</style>
     </div>
   );
-}
-
-export default Search;
+      }
+      
+export default Search

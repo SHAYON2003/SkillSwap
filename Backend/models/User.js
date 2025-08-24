@@ -45,12 +45,6 @@ const userSchema = new mongoose.Schema(
       }
     ],
 
-    progress: {
-      swapsCount: { type: Number, default: 0 },
-      offered: { type: Map, of: Number, default: {} },
-      learned: { type: Map, of: Number, default: {} },
-    },
-    
 
     bio:           { type: String, maxlength: 500, default: '' },
     linkedin:      { type: String, default: '' },

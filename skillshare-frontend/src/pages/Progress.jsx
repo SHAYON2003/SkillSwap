@@ -1,28 +1,28 @@
 // src/pages/Progress.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { TrendingUp, Target, GraduationCap, AlertCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-function StatCard({ label, value, emoji }) {
+function StatCard({ label, value, icon: Icon, loading }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="p-5 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur"
-    >
+    <div className="p-5 duration-500 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur animate-in slide-in-from-bottom">
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-600">{label}</span>
-        <span className="text-xl">{emoji}</span>
+        <Icon className="w-5 h-5 text-indigo-600" />
       </div>
-      <div className="mt-1 text-3xl font-bold text-slate-900">{value}</div>
-    </motion.div>
+      <div className="mt-1 text-3xl font-bold text-slate-900">
+        {loading ? (
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        ) : (
+          value
+        )}
+      </div>
+    </div>
   );
 }
 
-function SkillProgress({ title, items = [] }) {
-  // Safety check for items array
+function SkillProgress({ title, items = [], loading }) {
   const safeItems = Array.isArray(items) ? items : [];
   const max = useMemo(() => {
     if (safeItems.length === 0) return 1;
@@ -30,25 +30,34 @@ function SkillProgress({ title, items = [] }) {
   }, [safeItems]);
   
   return (
-    <div className="p-5 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur">
+    <div className="p-5 duration-500 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur animate-in slide-in-from-left">
       <div className="mb-4 text-sm font-semibold text-slate-800">{title}</div>
-      {safeItems.length === 0 ? (
-        <div className="text-sm text-slate-500">No data yet.</div>
+      
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          <span className="ml-2 text-sm text-slate-500">Loading...</span>
+        </div>
+      ) : safeItems.length === 0 ? (
+        <div className="py-8 text-center">
+          <div className="mb-2 text-4xl">📚</div>
+          <div className="text-sm text-slate-500">No skills tracked yet.</div>
+          <div className="mt-1 text-xs text-slate-400">Start skill swapping to see progress!</div>
+        </div>
       ) : (
         <div className="space-y-3">
-          {safeItems.map((it, idx) => {
-            const pct = Math.round(((it?.count || 0) / max) * 100);
-            // Generate a more unique key
-            const key = it?.name ? `${it.name}-${idx}` : `item-${idx}`;
+          {safeItems.map((item, idx) => {
+            const pct = Math.round(((item?.count || 0) / max) * 100);
+            const key = item?.name ? `${item.name}-${idx}` : `item-${idx}`;
             return (
-              <div key={key}>
+              <div key={key} className="duration-300 animate-in slide-in-from-bottom" style={{ animationDelay: `${idx * 100}ms` }}>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-700">{it?.name || 'Unknown'}</span>
-                  <span className="text-slate-500">{it?.count || 0}</span>
+                  <span className="font-medium text-slate-700">{item?.name || 'Unknown'}</span>
+                  <span className="text-slate-500">{item?.count || 0} swaps</span>
                 </div>
                 <div className="w-full h-2 mt-1 overflow-hidden rounded-full bg-slate-200/70">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-sky-500"
+                    className="h-full transition-all duration-700 ease-out rounded-full bg-gradient-to-r from-indigo-500 to-sky-500"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -61,34 +70,50 @@ function SkillProgress({ title, items = [] }) {
   );
 }
 
-function RecentList({ items = [] }) {
+function RecentList({ items = [], loading }) {
   const safeItems = Array.isArray(items) ? items : [];
+  
+  if (loading) {
+    return (
+      <div className="p-5 duration-500 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur animate-in slide-in-from-right">
+        <div className="mb-4 text-sm font-semibold text-slate-800">Recent Completed Swaps</div>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          <span className="ml-2 text-sm text-slate-500">Loading...</span>
+        </div>
+      </div>
+    );
+  }
   
   if (!safeItems.length) {
     return (
-      <div className="p-5 text-sm border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur text-slate-500">
-        No completed swaps yet.
+      <div className="p-5 duration-500 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur animate-in slide-in-from-right">
+        <div className="mb-4 text-sm font-semibold text-slate-800">Recent Completed Swaps</div>
+        <div className="py-8 text-center">
+          <div className="mb-2 text-4xl">🤝</div>
+          <div className="text-sm text-slate-500">No completed swaps yet.</div>
+          <div className="mt-1 text-xs text-slate-400">Complete your first swap to see it here!</div>
+        </div>
       </div>
     );
   }
   
   return (
-    <div className="p-5 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur">
+    <div className="p-5 duration-500 border shadow-sm rounded-2xl border-white/30 bg-white/60 backdrop-blur animate-in slide-in-from-right">
       <div className="mb-4 text-sm font-semibold text-slate-800">Recent Completed Swaps</div>
       <ul className="divide-y divide-slate-200/70">
-        {safeItems.slice(0, 8).map((r, index) => {
-          // Create a more reliable key
-          const key = r?._id || r?.id || `swap-${index}`;
+        {safeItems.slice(0, 8).map((swap, index) => {
+          const key = swap?._id || swap?.id || `swap-${index}`;
           return (
-            <li key={key} className="py-3">
+            <li key={key} className="py-3 duration-300 animate-in slide-in-from-bottom" style={{ animationDelay: `${index * 50}ms` }}>
               <div className="flex items-center justify-between">
                 <div className="text-slate-800">
-                  <span className="font-medium">{r?.skillOffered?.name || '—'}</span>
+                  <span className="font-medium">{swap?.skillOffered?.name || '—'}</span>
                   <span className="mx-2 text-slate-400">⇄</span>
-                  <span className="font-medium">{r?.skillRequested?.name || '—'}</span>
+                  <span className="font-medium">{swap?.skillRequested?.name || '—'}</span>
                 </div>
                 <div className="text-xs text-slate-500">
-                  {r?.completedAt ? new Date(r.completedAt).toLocaleDateString() : ''}
+                  {swap?.completedAt ? new Date(swap.completedAt).toLocaleDateString() : ''}
                 </div>
               </div>
             </li>
@@ -99,12 +124,11 @@ function RecentList({ items = [] }) {
   );
 }
 
-/* ---------- normalize helpers for new schema or old API ---------- */
+/* ---------- Data Processing Helpers ---------- */
 const mapToArray = (objOrMap) => {
   if (!objOrMap) return [];
   
   try {
-    // Mongoose Map serializes to plain object in JSON
     if (objOrMap instanceof Map) {
       return Array.from(objOrMap.entries()).map(([name, count]) => ({ name, count }));
     }
@@ -118,13 +142,11 @@ const mapToArray = (objOrMap) => {
   return [];
 };
 
-// New helper to merge skills with progress
 const mergeSkillsWithProgress = (skillsArray, progressData) => {
   if (!Array.isArray(skillsArray)) return [];
   
   const progressMap = {};
   if (progressData) {
-    // Convert progress data to a map for easy lookup
     if (progressData instanceof Map) {
       progressData.forEach((count, name) => {
         progressMap[name] = count;
@@ -138,64 +160,58 @@ const mergeSkillsWithProgress = (skillsArray, progressData) => {
   
   return skillsArray.map(skill => ({
     name: skill.name,
-    // Prioritize progress count over skill's own swapsCount
     count: progressMap[skill.name] || skill.count || skill.swapsCount || 0
   }));
 };
 
-// Safe localStorage access
-const getAuthToken = () => {
-  try {
-    return typeof window !== 'undefined' && window.localStorage 
-      ? localStorage.getItem('token') 
-      : null;
-  } catch (error) {
-    console.warn('Cannot access localStorage:', error);
-    return null;
-  }
-};
-
 export default function Progress() {
-  const { user } = useAuth();
-  const API = process.env.REACT_APP_API_URL;
+  const { user, token } = useAuth();
+  const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
-  const [server, setServer] = useState(null);
+  const [error, setError] = useState('');
+  const [progressData, setProgressData] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     
     const fetchProgress = async () => {
-      if (!user) {
+      if (!user || !token) {
         setLoading(false);
         return;
       }
 
       setLoading(true);
-      setErr('');
+      setError('');
       
       try {
-        const token = getAuthToken();
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const res = await axios.get(`${API}/api/progress`, {
+        const response = await axios.get(`${API}/api/progress`, {
           headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal
+          signal: controller.signal,
+          timeout: 10000 // 10 second timeout
         });
         
         if (!cancelled) {
-          setServer(res.data);
+          setProgressData(response.data);
         }
-      } catch (e) {
+      } catch (err) {
         if (!cancelled && !controller.signal.aborted) {
-          const errorMessage = e.response?.data?.message || 
-                              e.message || 
-                              'Could not load progress';
-          setErr(errorMessage);
-          setServer(null);
+          let errorMessage = 'Could not load progress data';
+          
+          if (err.response?.status === 401) {
+            errorMessage = 'Session expired. Please log in again.';
+          } else if (err.response?.status === 403) {
+            errorMessage = 'Access denied. Please check your permissions.';
+          } else if (err.response?.data?.message) {
+            errorMessage = err.response.data.message;
+          } else if (err.code === 'ECONNABORTED') {
+            errorMessage = 'Request timed out. Please try again.';
+          } else if (!navigator.onLine) {
+            errorMessage = 'No internet connection. Please check your network.';
+          }
+          
+          setError(errorMessage);
+          setProgressData(null);
         }
       } finally {
         if (!cancelled) {
@@ -210,101 +226,125 @@ export default function Progress() {
       cancelled = true;
       controller.abort();
     };
-  }, [API, user]);
+  }, [API, user, token]);
 
-  // ---- read swapsCount (prefer server, fallback to user.progress) ----
+  // Compute stats with proper fallbacks
   const swapsCount = useMemo(() => {
-    return server?.swapsCount ??
-           server?.progress?.swapsCount ??
-           user?.progress?.swapsCount ??
+    return progressData?.swapsCount ?? 
+           progressData?.progress?.swapsCount ?? 
+           user?.progress?.swapsCount ?? 
            0;
-  }, [server, user]);
+  }, [progressData, user]);
 
-  // ---- read offered / learned arrays with proper progress merging ----
-  const offeredArr = useMemo(() => {
-    // First try to use server skills merged with progress
-    if (server?.skills?.offered && Array.isArray(server.skills.offered)) {
-      return mergeSkillsWithProgress(server.skills.offered, server.progress?.offered);
+  const offeredSkills = useMemo(() => {
+    if (progressData?.skills?.offered && Array.isArray(progressData.skills.offered)) {
+      return mergeSkillsWithProgress(progressData.skills.offered, progressData.progress?.offered);
     }
     
-    // Fallback to user data
     if (user?.skillsOffered && Array.isArray(user.skillsOffered)) {
       return mergeSkillsWithProgress(user.skillsOffered, user.progress?.offered);
     }
     
-    // Last resort: just convert progress data to array
-    return mapToArray(server?.progress?.offered) || 
+    return mapToArray(progressData?.progress?.offered) || 
            mapToArray(user?.progress?.offered) || 
            [];
-  }, [server, user]);
+  }, [progressData, user]);
 
-  const learnedArr = useMemo(() => {
-    // First try to use server skills merged with progress
-    if (server?.skills?.learned && Array.isArray(server.skills.learned)) {
-      return mergeSkillsWithProgress(server.skills.learned, server.progress?.learned);
+  const learnedSkills = useMemo(() => {
+    if (progressData?.skills?.learned && Array.isArray(progressData.skills.learned)) {
+      return mergeSkillsWithProgress(progressData.skills.learned, progressData.progress?.learned);
     }
     
-    // Fallback to user data
     if (user?.skillsWanted && Array.isArray(user.skillsWanted)) {
       return mergeSkillsWithProgress(user.skillsWanted, user.progress?.learned);
     }
     
-    // Last resort: just convert progress data to array
-    return mapToArray(server?.progress?.learned) || 
+    return mapToArray(progressData?.progress?.learned) || 
            mapToArray(user?.progress?.learned) || 
            [];
-  }, [server, user]);
+  }, [progressData, user]);
 
-  const recent = useMemo(() => {
-    return Array.isArray(server?.recent) ? server.recent : [];
-  }, [server]);
+  const recentSwaps = useMemo(() => {
+    return Array.isArray(progressData?.recent) ? progressData.recent : [];
+  }, [progressData]);
+
+  if (!user) {
+    return (
+      <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-white">
+        <div className="container px-4 pt-24 pb-6 mx-auto">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+              <h2 className="mb-2 text-xl font-semibold text-slate-900">Please Log In</h2>
+              <p className="text-slate-600">You need to be logged in to view your progress.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-white">
       <div className="container px-4 pt-24 pb-6 mx-auto">
-        <motion.h1
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="text-3xl font-bold text-slate-900"
-        >
+        <h1 className="text-3xl font-bold duration-500 text-slate-900 animate-in slide-in-from-top">
           📈 Track Progress
-        </motion.h1>
-        <p className="mt-1 text-slate-600">
+        </h1>
+        <p className="mt-1 duration-500 delay-100 text-slate-600 animate-in slide-in-from-top">
           Monitor your learning journey and skill-swap milestones.
         </p>
 
-        {err && (
-          <div className="px-4 py-3 mt-4 border rounded-xl border-rose-200 bg-rose-50 text-rose-800">
-            {err}
+        {error && (
+          <div className="px-4 py-3 mt-4 duration-300 border rounded-xl border-rose-200 bg-rose-50 text-rose-800 animate-in slide-in-from-top">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
           </div>
         )}
 
-        {/* stats */}
+        {/* Statistics Cards */}
         <div className="grid grid-cols-1 gap-4 mt-6 md:grid-cols-3">
-          <StatCard label="Swaps Completed" value={loading ? '—' : swapsCount} emoji="✅" />
-          <StatCard label="Skills Offered (tracked)" value={loading ? '—' : offeredArr.length} emoji="🎯" />
-          <StatCard label="Skills Learned (tracked)" value={loading ? '—' : learnedArr.length} emoji="🎓" />
+          <StatCard 
+            label="Swaps Completed" 
+            value={swapsCount} 
+            icon={TrendingUp}
+            loading={loading}
+          />
+          <StatCard 
+            label="Skills Offered" 
+            value={offeredSkills.length} 
+            icon={Target}
+            loading={loading}
+          />
+          <StatCard 
+            label="Skills Learned" 
+            value={learnedSkills.length} 
+            icon={GraduationCap}
+            loading={loading}
+          />
         </div>
 
-        {/* details */}
+        {/* Progress Details */}
         <div className="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <SkillProgress
               title="Your Offered Skills Progress"
-              items={offeredArr
-                .filter(s => s?.name)
+              items={offeredSkills
+                .filter(skill => skill?.name)
                 .sort((a, b) => (b?.count || 0) - (a?.count || 0))}
+              loading={loading}
             />
             <SkillProgress
               title="Your Learned Skills Progress"
-              items={learnedArr
-                .filter(s => s?.name)
+              items={learnedSkills
+                .filter(skill => skill?.name)
                 .sort((a, b) => (b?.count || 0) - (a?.count || 0))}
+              loading={loading}
             />
           </div>
           <div className="lg:col-span-1">
-            <RecentList items={recent} />
+            <RecentList items={recentSwaps} loading={loading} />
           </div>
         </div>
       </div>

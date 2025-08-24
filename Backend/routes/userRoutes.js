@@ -8,25 +8,26 @@ const {
   removeSkill,
   uploadAvatar,
   deleteAvatar,
-  updateMe,           
+  updateMe,
 } = require('../controllers/userController');
+
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 const { upload } = require('../utils/multer');
-const requestController = require('../controllers/requestController')
+const { registerLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-router.post('/register', registerUser);
+router.post('/register', registerLimiter, registerUser);
 router.post('/login', loginUser);
 
 router.post('/avatar', auth, upload.single('avatar'), uploadAvatar);
 router.delete('/avatar', auth, deleteAvatar);
 
 router.get('/me', auth, getUserProfile);
-router.patch('/me', auth, updateMe);   
+router.patch('/me', auth, updateMe);
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, async (_req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);

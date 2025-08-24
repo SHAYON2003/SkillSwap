@@ -367,7 +367,7 @@ export default function Requests() {
           </span>
           {user?.username && (
             <span className="text-sm text-slate-600">
-              Hi, <span className="font-semibold">{user.username}</span> — let’s trade some skills.
+              Hi, <span className="font-semibold">{user.username}</span> — let's trade some skills.
             </span>
           )}
         </div>
@@ -381,7 +381,7 @@ export default function Requests() {
             <span className="text-slate-700">Find • Share • Grow</span>
           </h1>
           <p className="max-w-2xl mt-3 text-slate-600">
-            Barter your strengths, borrow someone’s superpower. Clean UI, clean vibes, no chaos.
+            Barter your strengths, borrow someone's superpower. Clean UI, clean vibes, no chaos.
           </p>
 
         {/* Quick CTA */}
@@ -563,9 +563,9 @@ export default function Requests() {
         {/* Feature highlights */}
         <section className="grid grid-cols-1 gap-4 mb-12 md:grid-cols-3">
           {[
-            { title: 'Smart Matching', desc: 'We surface users with complementary skills to speed up your swap.' },
-            { title: 'Zero Awkwardness', desc: 'Clear status + tidy threads. No ghosting energy here.' },
-            { title: 'Built for Momentum', desc: 'Light animations, fast flows, and just enough dopamine.' },
+            { title: 'Zero Awkwardness', desc: 'Clear status + tidy threads. No ghosting energy here.', icon: '🎯' },
+            { title: 'Built for Momentum', desc: 'Light animations, fast flows, and just enough dopamine.', icon: '⚡' },
+            { title: 'Smart Community', desc: 'Connect with like-minded learners and build lasting relationships.', icon: '🤝' },
           ].map((f) => (
             <motion.div
               key={f.title}
@@ -575,8 +575,11 @@ export default function Requests() {
               viewport={{ once: true, amount: 0.3 }}
               className="p-5 transition-shadow border shadow-sm rounded-3xl border-white/30 bg-white/60 backdrop-blur-2xl hover:shadow-md"
             >
-              <h4 className="text-lg font-semibold text-slate-900">{f.title}</h4>
-              <p className="mt-1 text-slate-600">{f.desc}</p>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl">{f.icon}</span>
+                <h4 className="text-lg font-semibold text-slate-900">{f.title}</h4>
+              </div>
+              <p className="text-slate-600">{f.desc}</p>
             </motion.div>
           ))}
         </section>
