@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import api from '../api'
 
 const AuthContext = createContext();
 
@@ -43,33 +44,22 @@ export function AuthProvider({ children }) {
   // 🔹 LOGIN - Updated to handle both email and username
   const login = async (loginData) => {
     try {
-      // Handle both old format (email, password) and new format (object)
-      let requestData;
-      
-      if (typeof loginData === 'string') {
-        // Old format: login(email, password) - for backward compatibility
-        const password = arguments[1];
-        requestData = { email: loginData, password };
-      } else {
-        // New format: login({ email/username, password })
-        requestData = loginData;
-      }
+      const requestData =
+        typeof loginData === 'string'
+          ? { email: loginData, password: arguments[1] }
+          : loginData;
 
-      const res = await axios.post(`${API}/users/login`,
-        requestData,
-        { headers: { 'Content-Type': 'application/json' } }
-      );
+      // NOTE: backend mounts auth at /api/auth
+      const res = await api.post(`/api/auth/login`, requestData);
 
       localStorage.setItem('token', res.data.token);
       setUser(res.data.user);
       setUnreads({ chats: 0, notifications: 0 });
-
       navigate('/home', { replace: true });
     } catch (err) {
-      // Enhanced error handling
-      const errorMessage = err.response?.data?.message || err.message || 'Login failed';
-      const error = new Error(errorMessage);
-      error.response = err.response; // Preserve original response for frontend
+      const msg = err.response?.data?.message || err.message || 'Login failed';
+      const error = new Error(msg);
+      error.response = err.response;
       throw error;
     }
   };
