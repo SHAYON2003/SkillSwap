@@ -3,6 +3,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import api from '../api'
+// DEBUG — remove after fixing
+console.log("REACT_APP_API_URL =", process.env.REACT_APP_API_URL);
+
 
 const AuthContext = createContext();
 
